@@ -1,0 +1,102 @@
+name: CI (Python + ESP-IDF)
+
+on:
+  pull_request:
+    branches:
+      - "**"
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  python-tests:
+    name: Python tests (3.13)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.13 (latest patch)
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          check-latest: true
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+            pyproject.toml
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
+          # If using Poetry:
+          if [ -f pyproject.toml ] && grep -q '\[tool.poetry\]' pyproject.toml; then
+            pip install poetry
+            poetry install --no-interaction --no-root
+          fi
+
+      - name: Run tests (pytest if available)
+        run: |
+          if command -v pytest >/dev/null 2>&1; then
+            pytest -q
+          elif [ -f pytest.ini ] || [ -f pyproject.toml ] || [ -f setup.cfg ]; then
+            python -m pytest -q
+          elif [ -d tests ] || [ -d test ]; then
+            python -m pytest -q
+          else
+            echo "No pytest configuration detected; skipping Python tests."
+          fi
+
+  esp-idf-build:
+    name: ESP-IDF build (esp32s3, v5.5)
+    runs-on: ubuntu-latest
+    env:
+      IDF_TARGET: esp32s3
+      IDF_VERSION: v5.5
+      IDF_PROJECT_DIR: embedded
+    defaults:
+      run:
+        working-directory: ${{ github.workspace }}  # Ensures we're in the right project folder
+    steps:
+      - name: Checkout (with submodules)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Resolve project directory
+        run: |
+          if [ ! -f "${IDF_PROJECT_DIR}/CMakeLists.txt" ]; then
+            echo "CMakeLists.txt not found in '${IDF_PROJECT_DIR}'. Falling back to repo root."
+            echo "IDF_PROJECT_DIR=." >> "$GITHUB_ENV"
+          else
+            echo "Using '${IDF_PROJECT_DIR}' as project directory."
+            echo "IDF_PROJECT_DIR=${IDF_PROJECT_DIR}" >> "$GITHUB_ENV"
+          fi
+
+      - name: Build ESP-IDF project
+        uses: espressif/esp-idf-ci-action@v1
+        with:
+          esp_idf_version: ${{ env.IDF_VERSION }}
+          target: ${{ env.IDF_TARGET }}
+          path: ${{ env.IDF_PROJECT_DIR }}
+          command: idf.py build
+
+      - name: Upload build artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: esp-idf-build-${{ github.run_number }}
+          path: |
+            ${{ env.IDF_PROJECT_DIR }}/build/*.bin
+            ${{ env.IDF_PROJECT_DIR }}/build/*.elf
+            ${{ env.IDF_PROJECT_DIR }}/build/flasher_args.json
+            ${{ env.IDF_PROJECT_DIR }}/build/bootloader/*.bin
+            ${{ env.IDF_PROJECT_DIR }}/build/partition_table/*.bin
+          if-no-files-found: ignore
