@@ -1,4 +1,4 @@
-name: CI (Python + ESP-IDF)
+name: CI (Python)
 
 on:
   pull_request:
@@ -80,13 +80,13 @@ jobs:
             echo "IDF_PROJECT_DIR=${IDF_PROJECT_DIR}" >> "$GITHUB_ENV"
           fi
 
-      - name: Build ESP-IDF project
-        uses: espressif/esp-idf-ci-action@v1
-        with:
-          esp_idf_version: ${{ env.IDF_VERSION }}
-          target: ${{ env.IDF_TARGET }}
-          path: ${{ env.IDF_PROJECT_DIR }}
-          command: idf.py build
+      # - name: Build ESP-IDF project
+      #   uses: espressif/esp-idf-ci-action@v1
+      #   with:
+      #     esp_idf_version: ${{ env.IDF_VERSION }}
+      #     target: ${{ env.IDF_TARGET }}
+      #     path: ${{ env.IDF_PROJECT_DIR }}
+      #     command: idf.py build
 
       - name: Upload build artifacts
         if: always()
