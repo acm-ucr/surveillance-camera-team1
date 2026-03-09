@@ -1,0 +1,20 @@
+/* stylelint-disable unknownAtRules */
+
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+@theme {
+    --color-forge-maroon: #632024;
+    --color-forge-darkblue: #2E3F66;
+    --color-forge-brown: #7a6f6f;
+    --color-forge-lightblue: #E4EAF5;
+    --color-forge-gray: #cfcfcf;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+}
