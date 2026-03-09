@@ -115,7 +115,7 @@ export default function CameraPage() {
       ))}
     </select>
 
-    {/* BUTTON PANEL */}
+    {/* button panel */}
     <div className="w-full max-w-[700px] bg-forge-brown py-[12px] rounded-[20px] flex justify-center gap-20 shadow-lg mx-auto">
       <button
         onClick={takePhoto}
